@@ -12,7 +12,7 @@
   var elProjet = $("f-projet"), elDate = $("f-date"), elLieu = $("f-lieu"), elAuteur = $("f-auteur");
   var elGrid = $("photo-grid"), elEmpty = $("empty-state"), elStatus = $("status-bar");
   var elFileInput = $("file-input");
-  var btnAdd = $("btn-add"), btnPdf = $("btn-pdf"), btnReset = $("btn-reset");
+  var btnAdd = $("btn-add"), btnPdf = $("btn-pdf"), btnWa = $("btn-wa"), btnReset = $("btn-reset");
   var elToast = $("toast");
   var segmented = $("layout-segmented");
 
@@ -181,9 +181,11 @@
     if(state.photos.length === 0){
       elEmpty.style.display = "block";
       btnPdf.disabled = true;
+      btnWa.disabled = true;
     } else {
       elEmpty.style.display = "none";
       btnPdf.disabled = false;
+      btnWa.disabled = false;
     }
     state.photos.forEach(function(photo, idx){
       var card = document.createElement("div");
@@ -794,11 +796,57 @@
     showToast("Annotations enregistrées");
   });
 
-  async function generatePdf(){
+  // Dernier PDF généré, gardé en mémoire pour le bouton "Partager" du bandeau
+  var lastPdf = null;
+
+  function canShareFile(file){
+    return !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
+  }
+
+  // Ouvre la feuille de partage native (WhatsApp, Mail, Messages...) avec le PDF en pièce jointe.
+  // Retourne "done" | "cancel" | "blocked" (geste utilisateur expiré) | "unsupported".
+  async function tryShare(pdf){
+    if(!canShareFile(pdf && pdf.file)) return "unsupported";
+    try{
+      await navigator.share({ files: [pdf.file], title: pdf.title, text: pdf.text });
+      return "done";
+    }catch(e){
+      if(e && e.name === "AbortError") return "cancel";
+      console.error("Partage refusé", e);
+      return "blocked";
+    }
+  }
+
+  function showReadyBanner(pdf){
+    var readyLink = $("pdf-ready-link");
+    readyLink.href = pdf.url;
+    readyLink.download = pdf.fname;
+    readyLink.textContent = "📄 Ouvrir / enregistrer : " + pdf.fname;
+    $("pdf-ready-share").style.display = canShareFile(pdf.file) ? "inline-block" : "none";
+    $("pdf-ready").classList.add("show");
+  }
+
+  function triggerDownload(pdf){
+    try{
+      var a = document.createElement("a");
+      a.href = pdf.url;
+      a.download = pdf.fname;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }catch(autoErr){
+      console.error("Téléchargement auto impossible", autoErr);
+    }
+  }
+
+  // mode : "download" (défaut) ou "share" (envoi WhatsApp / feuille de partage)
+  async function generatePdf(mode){
     if(state.photos.length === 0) return;
+    var activeBtn = (mode === "share") ? btnWa : btnPdf;
     btnPdf.disabled = true;
-    var origLabel = btnPdf.innerHTML;
-    btnPdf.innerHTML = '<span class="icon">⏳</span><span>Génération...</span>';
+    btnWa.disabled = true;
+    var origLabel = activeBtn.innerHTML;
+    activeBtn.innerHTML = '<span class="icon">⏳</span><span>Génération...</span>';
     try{
       var jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
       var doc = new jsPDFCtor({ unit: "mm", format: "a4", orientation: "portrait" });
@@ -945,37 +993,56 @@
 
       var blob = doc.output("blob");
       var url = URL.createObjectURL(blob);
+      var file = null;
+      try{ file = new File([blob], fname, { type: "application/pdf" }); }catch(fileErr){ console.error(fileErr); }
 
-      // Tentative de téléchargement automatique (fonctionne sur la plupart des navigateurs desktop/Android)
-      try{
-        var a = document.createElement("a");
-        a.href = url;
-        a.download = fname;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }catch(autoErr){
-        console.error("Téléchargement auto impossible", autoErr);
+      var shareText = "Rapport photo — " + projetLabel
+        + (dateLabel ? " — " + dateLabel : "")
+        + (lieuLabel ? " (" + lieuLabel + ")" : "");
+      lastPdf = { file: file, url: url, fname: fname, title: projetLabel, text: shareText };
+
+      if(mode === "share"){
+        var result = await tryShare(lastPdf);
+        if(result === "done"){
+          showToast("Rapport partagé");
+        } else if(result === "cancel"){
+          showToast("Partage annulé");
+          showReadyBanner(lastPdf);
+        } else if(result === "blocked"){
+          // iOS exige un geste récent : on propose un 2e appui direct sur "Partager"
+          showReadyBanner(lastPdf);
+          showToast("PDF prêt — touchez « Partager » pour l'envoyer");
+        } else {
+          // Partage de fichier non géré par ce navigateur : on enregistre le PDF
+          triggerDownload(lastPdf);
+          showReadyBanner(lastPdf);
+          showToast("Partage direct indisponible — PDF enregistré, joignez-le dans WhatsApp");
+        }
+      } else {
+        // Téléchargement automatique (la plupart des navigateurs desktop/Android)
+        triggerDownload(lastPdf);
+        // Bandeau de secours toujours affiché : certains navigateurs mobiles bloquent
+        // le téléchargement automatique, ce lien permet de l'ouvrir/enregistrer manuellement.
+        showReadyBanner(lastPdf);
+        showToast("PDF prêt — " + totalPages + (totalPages>1?" pages":" page"));
       }
-
-      // Lien de secours toujours affiché : certains navigateurs mobiles bloquent
-      // le téléchargement automatique, ce lien permet de l'ouvrir/enregistrer manuellement.
-      var readyBanner = $("pdf-ready");
-      var readyLink = $("pdf-ready-link");
-      readyLink.href = url;
-      readyLink.download = fname;
-      readyLink.textContent = "📄 Ouvrir / enregistrer : " + fname;
-      readyBanner.classList.add("show");
-
-      showToast("PDF prêt — " + totalPages + (totalPages>1?" pages":" page"));
     }catch(err){
       console.error(err);
       showToast("Erreur PDF : " + (err && err.message ? err.message : "erreur inconnue"));
     } finally {
       btnPdf.disabled = state.photos.length === 0;
-      btnPdf.innerHTML = origLabel;
+      btnWa.disabled = state.photos.length === 0;
+      activeBtn.innerHTML = origLabel;
     }
   }
+
+  $("pdf-ready-share").addEventListener("click", async function(){
+    if(!lastPdf) return;
+    var r = await tryShare(lastPdf);
+    if(r === "done") showToast("Rapport partagé");
+    else if(r === "cancel") showToast("Partage annulé");
+    else showToast("Partage impossible — utilisez le lien pour enregistrer le PDF");
+  });
 
   $("pdf-ready-close").addEventListener("click", function(){
     $("pdf-ready").classList.remove("show");
@@ -991,7 +1058,8 @@
     return parts[2] + "/" + parts[1] + "/" + parts[0];
   }
 
-  btnPdf.addEventListener("click", generatePdf);
+  btnPdf.addEventListener("click", function(){ generatePdf("download"); });
+  btnWa.addEventListener("click", function(){ generatePdf("share"); });
 
   load();
 })();

@@ -277,7 +277,19 @@
   .btn .icon{ font-size: 17px; }
   .btn-add{ background: var(--jaune); color: var(--jaune-ink); }
   .btn-pdf{ background: var(--vert); color: #fff; }
+  .btn-wa{ background: #25D366; color: #073B1B; }
   .btn-reset{ background: var(--ardoise); color: #B9B6AE; flex: 0 0 auto; width: 52px; }
+  .toolbar .btn{ padding-left: 4px; padding-right: 4px; font-size: 12px; }
+  #pdf-ready #pdf-ready-share{
+    width: auto;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 15px;
+    background: #fff;
+    color: #1E5E2C;
+    font-weight: 800;
+    font-size: 12px;
+  }
   .btn:disabled{ opacity: 0.4; cursor:not-allowed; }
 
   #status-bar{
