@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#23262B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rapport Photo">
+<title>Rapport Photo — Chantier</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="app">
+  <div class="brand">
+    <div class="badge stencil">RP</div>
+    <div>
+      <h1 class="stencil">Rapport Photo</h1>
+      <small>Reportage de chantier — commentaires &amp; mise en page</small>
+    </div>
+  </div>
+  <div class="meta-grid">
+    <div class="field">
+      <label for="f-projet">Projet / Chantier</label>
+      <input id="f-projet" type="text" placeholder="Ex. Résidence Filao">
+    </div>
+    <div class="field">
+      <label for="f-date">Date</label>
+      <input id="f-date" type="date">
+    </div>
+    <div class="field">
+      <label for="f-lieu">Adresse / Lieu</label>
+      <input id="f-lieu" type="text" placeholder="Ex. Le Lamentin">
+    </div>
+    <div class="field">
+      <label for="f-auteur">Auteur</label>
+      <input id="f-auteur" type="text" placeholder="Ex. Christophe">
+    </div>
+  </div>
+  <div class="backup-row">
+    <button id="btn-export" class="link-btn" type="button">💾 Exporter la sauvegarde</button>
+    <button id="btn-import" class="link-btn" type="button">📂 Importer une sauvegarde</button>
+  </div>
+</header>
+
+<input id="import-input" type="file" accept="application/json,.json" style="display:none;">
+
+<main>
+  <div class="layout-row">
+    <span class="label-inline">Photos par page (PDF)</span>
+    <div class="segmented" id="layout-segmented">
+      <button data-n="1">1</button>
+      <button data-n="2">2</button>
+      <button data-n="4" class="active">4</button>
+      <button data-n="6">6</button>
+    </div>
+  </div>
+
+  <div id="empty-state">
+    <div class="stencil">Aucune photo</div>
+    <p>Touchez « Ajouter des photos » pour commencer le reportage.</p>
+  </div>
+
+  <div id="photo-grid"></div>
+  <div id="status-bar"></div>
+</main>
+
+<input id="file-input" type="file" accept="image/*" multiple>
+
+<div id="pdf-ready">
+  <a id="pdf-ready-link" href="#" target="_blank" rel="noopener">📄 Ouvrir / enregistrer le PDF</a>
+  <button id="pdf-ready-close" title="Fermer">✕</button>
+</div>
+
+<div id="annotate-modal" class="annotate-modal">
+  <div class="annotate-topbar">
+    <button id="annotate-cancel" class="ann-tb-btn">✕ Annuler</button>
+    <div class="annotate-title stencil" id="annotate-title">Annoter</div>
+    <button id="annotate-save" class="ann-tb-btn ann-save">✓ Enregistrer</button>
+  </div>
+  <div class="annotate-canvas-wrap">
+    <canvas id="annotate-canvas"></canvas>
+  </div>
+  <div class="annotate-text-entry" id="annotate-text-entry">
+    <input id="annotate-text-input" type="text" placeholder="Texte de l'annotation" maxlength="60">
+    <button id="annotate-text-confirm" type="button">Ajouter</button>
+    <button id="annotate-text-cancel-entry" type="button" title="Annuler">✕</button>
+  </div>
+  <div class="annotate-toolbar">
+    <div class="ann-tools">
+      <button class="ann-tool active" data-tool="arrow" type="button">➚ Flèche</button>
+      <button class="ann-tool" data-tool="text" type="button">🅃 Texte</button>
+    </div>
+    <div class="ann-colors">
+      <button class="ann-color active" data-color="#F2B705" style="background:#F2B705" type="button"></button>
+      <button class="ann-color" data-color="#C1443C" style="background:#C1443C" type="button"></button>
+      <button class="ann-color" data-color="#FFFFFF" style="background:#FFFFFF" type="button"></button>
+      <button class="ann-color" data-color="#111111" style="background:#111111" type="button"></button>
+    </div>
+    <div class="ann-actions">
+      <button id="annotate-undo" title="Annuler la dernière" type="button">↺</button>
+      <button id="annotate-clear" title="Tout effacer" type="button">🗑</button>
+    </div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button class="btn btn-reset" id="btn-reset" title="Nouveau rapport">
+    <span class="icon">↺</span>
+  </button>
+  <button class="btn btn-add" id="btn-add">
+    <span class="icon">＋</span>
+    <span>Photos</span>
+  </button>
+  <button class="btn btn-pdf" id="btn-pdf" disabled>
+    <span class="icon">⇩</span>
+    <span>Générer PDF</span>
+  </button>
+</div>
+
+<div id="toast"></div>
+
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="app.js"></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(e){
+        console.error("Service worker non enregistré", e);
+      });
+    });
+  }
+</script>
+</body>
+</html>
