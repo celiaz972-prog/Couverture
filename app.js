@@ -989,7 +989,8 @@
         }
       }
 
-      var fname = "rapport-photo-" + (state.projet ? slugify(state.projet)+"-" : "") + (state.date || todayISO()) + ".pdf";
+      // Nom du fichier : « Nom du projet - AAAA-MM-JJ.pdf » (accents et espaces conservés)
+      var fname = safeFileName(state.projet || "Rapport photo") + " - " + (state.date || todayISO()) + ".pdf";
 
       var blob = doc.output("blob");
       var url = URL.createObjectURL(blob);
@@ -1047,6 +1048,17 @@
   $("pdf-ready-close").addEventListener("click", function(){
     $("pdf-ready").classList.remove("show");
   });
+
+  // Retire uniquement les caractères interdits dans un nom de fichier
+  function safeFileName(s){
+    var clean = String(s)
+      .replace(/[\\\/:*?"<>|\u0000-\u001f]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 80)
+      .trim();
+    return clean || "Rapport photo";
+  }
 
   function slugify(s){
     return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"").slice(0,40);

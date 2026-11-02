@@ -3,7 +3,7 @@
 // Les photos elles-mêmes ne transitent jamais par le réseau : elles restent
 // en local (IndexedDB), ce cache ne concerne que le code de l'application.
 
-var CACHE_NAME = "rapport-photo-v2";
+var CACHE_NAME = "rapport-photo-v3";
 var APP_SHELL = [
   "./index.html",
   "./style.css",
